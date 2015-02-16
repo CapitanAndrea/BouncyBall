@@ -13,6 +13,7 @@ type BouncyEditor() as this =
 
     let mutable ball = new Ball()
     let blocks = new ResizeArray<Block>()
+    let hitBlocks = new ResizeArray<Block>()
     let coins = new ResizeArray<Coin>()
 
     let mutable pressRight = false
@@ -85,25 +86,28 @@ type BouncyEditor() as this =
             let mutable newYPos = 0.f
             let nextBall = new Ball()
             nextBall.Position <- nextPositionY
-            if(blocks |> Seq.exists(fun block ->
-                if nextBall.HitTest(block) then
-                    if win then winBounces <- winBounces + 1
-                    hitBlock := block
-                    true
+            //cerco tutti i blocchi colpiti dalla palla nella prossima posizione
+            blocks |> Seq.iter(fun block -> if nextBall.HitTest(block) then hitBlocks.Add(block))
+
+            if(hitBlocks.Count > 0) then
+                hitBlock := hitBlocks.[0]
+                //assegno ad hitblock quello più alto nel caso la velocità sia > 0
+                if ball.VY > 0.f then
+                    hitBlocks |> Seq.iter(fun block ->
+                        if block.Position.Y < (!hitBlock).Position.Y then hitBlock := block
+                        )
                 else
-                    //printfn "ball at %f - %f do not hit" nextPositionY.X nextPositionY.Y
-                    //printfn "block at %f - %f" (!hitBlock).Position.X (!hitBlock).Position.Y
-                    false
-                )
-               ) then
-                    let distance = (!hitBlock).Distance(ballPosition.[0].Y+ball.Diameter)
-                    //tempo che impiega la palla a colpire il mattone
-                    let fallingTime = -ball.VY + sqrt((pown (ball.VY) 2) + 2.f*distance)
-                    let remainingTime = 20.f-fallingTime
-                    let remainingTick = remainingTime/20.f
-                    //inverto la velocità lungo l'asse y
-                    if ball.VY>0.f then
-                        //printfn "hitblock is %f - %f because y will be %f" (!hitBlock).Position.X (!hitBlock).Position.Y nextPositionY.Y
+                    hitBlocks |> Seq.iter(fun block ->
+                        if block.Position.Y > (!hitBlock).Position.Y then hitBlock := block
+                        )
+                hitBlocks.Clear()
+                let distance = (!hitBlock).Distance(ballPosition.[0].Y+ball.Diameter)
+                //tempo che impiega la palla a colpire il mattone
+                let fallingTime = -ball.VY + sqrt((pown (ball.VY) 2) + 2.f*distance)
+                let remainingTime = 20.f-fallingTime
+                let remainingTick = remainingTime/20.f
+                //inverto la velocità lungo l'asse y
+                if ball.VY>0.f then
                     //scendendo la pallina colpisce...
                         match ((!hitBlock):Block) with
                         | :? Spike -> //spine

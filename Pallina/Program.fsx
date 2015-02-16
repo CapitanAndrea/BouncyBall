@@ -22,13 +22,13 @@ Menu.Controls.Add(m)
 let Play = new Form(Text="Play", TopMost=true)
 let p = new BB.Controls.Bouncy_Ball(Dock=DockStyle.Fill)
 Play.Controls.Add(p)
-//Play.Show()
+Play.Show()
 
 //_LEVEL SELECT_____________//
 let Levels = new Form(Text="Levels", TopMost=true)
 let l = new BB.Controls.LevelSelect(Dock=DockStyle.Fill)
 Levels.Controls.Add(l)
-Levels.Show()
+//Levels.Show()
 
 //_TUTORIAL_________________//
 let Tutorial = new Form(Text="Tutorial", TopMost=true, Width=600, Height=350)
