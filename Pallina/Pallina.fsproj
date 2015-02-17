@@ -41,13 +41,13 @@
   <Import Project="$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets" Condition=" Exists('$(MSBuildExtensionsPath32)\..\Microsoft SDKs\F#\3.0\Framework\v4.0\Microsoft.FSharp.Targets')" />
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="Utility.fsx" />
-    <None Include="Menu.fsx" />
-    <None Include="Play.fsx" />
-    <None Include="LevelSelect.fsx" />
-    <None Include="Tutorial.fsx" />
-    <None Include="Editor.fsx" />
-    <None Include="Program.fsx" />
+    <Compile Include="Utility.fs" />
+    <Compile Include="Menu.fs" />
+    <Compile Include="Play.fs" />
+    <Compile Include="LevelSelect.fs" />
+    <Compile Include="Tutorial.fs" />
+    <Compile Include="Editor.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
