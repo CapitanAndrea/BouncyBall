@@ -189,31 +189,13 @@ type BouncyEditor() as this =
                 ko()
             //disegno
             coins |> Seq.iter(fun coin ->
-                let ballRect = new RectangleF(ball.Position, new SizeF(ball.Diameter, ball.Diameter))
-                let coinRect = new RectangleF(coin.Position, new SizeF(coin.Diameter, coin.Diameter))
-                if(ballRect.IntersectsWith(coinRect) && coin.IsCollected = false) then
+                if(coin.collectTest(ball) && coin.IsCollected = false) then
                     coin.IsCollected <- true
                     coinsLeft <- coinsLeft - 1
                     win <- coinsLeft = 0
                     printfn "coins left %d" coinsLeft
-                    if step = 4 then step <- step + 1
             )
             this.Invalidate()
-
-            match step with
-            | 0 ->
-                if ball.Position.X>200.f then
-                    step <- step + 1
-                    updateLevel()
-            | 1 ->
-                if ball.Position.X<30.f then
-                    step <- step + 1
-                    updateLevel()
-            | 3 ->
-                if ball.Position.X>165.f then
-                    step <- step + 1
-                    updateLevel()
-            | _ -> ()
 
             //ballTimer.Stop()
             )
@@ -291,35 +273,46 @@ type BouncyEditor() as this =
         |Keys.D -> if ballTimer.Enabled then pressRight <- true
         |Keys.P -> if ballTimer.Enabled then ballTimer.Stop() else ballTimer.Start()
         |Keys.B ->
-            if blockPlacing = false && ballPlacing = false then //block
+            if blockPlacing = false && ballPlacing = false && coinPlacing = false then //block
                 let mousePosition = this.PointToClient(Control.MousePosition)
                 let mousePositionF = new PointF(float32(mousePosition.X)-(7.5f), float32(mousePosition.Y)-(7.5f))
                 placedBlock <- new Block(mousePositionF)
                 blockPlacing <- true
         |Keys.V ->
-            if blockPlacing = false && ballPlacing = false then //spike
+            if blockPlacing = false && ballPlacing = false && coinPlacing = false then //spike
                 let mousePosition = this.PointToClient(Control.MousePosition)
                 let mousePositionF = new PointF(float32(mousePosition.X)-(7.5f), float32(mousePosition.Y)-(7.5f))
                 placedBlock <- new Spike(mousePositionF)
                 blockPlacing <- true
         |Keys.C ->
-            if blockPlacing = false && ballPlacing = false then //jump
+            if blockPlacing = false && ballPlacing = false && coinPlacing = false then //jump
                 let mousePosition = this.PointToClient(Control.MousePosition)
                 let mousePositionF = new PointF(float32(mousePosition.X)-(7.5f), float32(mousePosition.Y)-(7.5f))
                 placedBlock <- new JumpBlock(mousePositionF)
                 blockPlacing <- true
         |Keys.X ->
-            if ballPlacing = false && blockPlacing = false then //spike
+            if ballPlacing = false && blockPlacing = false && coinPlacing = false then //ball
                 let mousePosition = this.PointToClient(Control.MousePosition)
                 let mousePositionF = new PointF(float32(mousePosition.X)-(3.5f), float32(mousePosition.Y)-(3.5f))
-                ball.Position <- mousePositionF
-                ballPlacing <- true
+                let nextBall = new Ball()
+                nextBall.Position <- mousePositionF
+                if blocks |> Seq.exists(fun block ->
+                    nextBall.HitTest(block)
+                    ) then ()
+                    else
+                        ball.Position <- mousePositionF
+                        ballPlacing <- true
         |Keys.Z ->            
-            if ballPlacing = false && blockPlacing = false then //coin
+            if ballPlacing = false && blockPlacing = false && coinPlacing = false then //coin
                 let mousePosition = this.PointToClient(Control.MousePosition)
                 let mousePositionF = new PointF(float32(mousePosition.X)-(5.f), float32(mousePosition.Y)-(5.f))
-                placedCoin.Position <- mousePositionF
-                coinPlacing <- true
+                placedCoin <- new Coin(mousePositionF)
+                if blocks |> Seq.exists(fun block ->
+                    placedCoin.HitTest(block)
+                    ) then ()
+                    else
+                        coinsLeft <- coinsLeft + 1
+                        coinPlacing <- true
         |Keys.H ->
             MessageBox.Show("B to create a new block\nV to create a new spike\nC to create a new jump-block\nX to move the ball\nZ to create a new coin\nMouse click to place the object\nP to pause/unpause the game", "Instructions") |> ignore
         |_ -> ()
@@ -333,18 +326,40 @@ type BouncyEditor() as this =
         |_ -> ()
 
     override this.OnMouseClick e =
-        if blockPlacing then
-            blocks.Add(placedBlock)
+        match e.Button with
+        | MouseButtons.Right ->
             blockPlacing <- false
-            this.Invalidate()
-        if ballPlacing then
+            coinPlacing <- false
             ballPlacing <- false
             this.Invalidate()
-        if coinPlacing then
-            coins.Add(placedCoin)
-            coinsLeft <- coinsLeft + 1
-            coinPlacing <- false
-            this.Invalidate()
+        | MouseButtons.Left ->
+            if blockPlacing then
+                blocks.Add(placedBlock)
+                blockPlacing <- false
+                this.Invalidate()
+            else if ballPlacing then
+                ballPlacing <- false
+                this.Invalidate()
+            else if coinPlacing then
+                coins.Add(placedCoin)
+                coinsLeft <- coinsLeft + 1
+                coinPlacing <- false
+                this.Invalidate()
+            else
+                let floatPosition = new PointF(float32(e.X), float32(e.Y))
+                placedBlock <- blocks.FindLast(fun block ->
+                    block.IsInside(floatPosition)
+                    )
+                if blocks.Remove(placedBlock) then blockPlacing <- true
+                else
+                    placedCoin <- coins.FindLast(fun coin ->
+                        coin.IsInside(new PointF(float32(e.X), float32(e.Y)))
+                        )
+                    if coins.Remove(placedCoin) then
+                        coinPlacing <- true
+                        placedCoin.Position <- new PointF(floatPosition.X-placedCoin.Diameter, floatPosition.Y-placedCoin.Diameter)
+        |_ ->()
+
 
     override this.OnMouseMove e =
         if blockPlacing then
