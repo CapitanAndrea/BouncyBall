@@ -16,7 +16,7 @@ type HomeButton(text:string) =
     let area = new Drawing2D.GraphicsPath()
 
     do
-        area.AddLines([| new Point(0, 0); new Point(90, 0); new Point(120, 15); new Point(90, 30); new Point(0, 30)|])
+        area.AddLines([| new Point(0, 0); new Point(100, 0); new Point(130, 15); new Point(100, 30); new Point(0, 30)|])
     
     override this.GetSize () =
         new SizeF(100.f, 30.f)
@@ -28,7 +28,7 @@ type HomeButton(text:string) =
     override this.OnPaint g =
         g.FillPath((if this.IsOver then Brushes.Crimson else Brushes.Brown), area)
         g.DrawPath(Pens.Black, area)
-        g.DrawString(text, new Font ("Arial", 18.f), Brushes.Black, new PointF(3.f, 3.f))
+        g.DrawString(text, new Font ("Arial", 18.f), Brushes.Black, new PointF(0.f, 3.f))
         
 
 
@@ -42,7 +42,7 @@ type Home() as this =
         new HomeButton("Play")
         new HomeButton("Tutorial")
         new HomeButton("Levels")
-        new HomeButton("Editor")
+        new HomeButton("Free build")
     |]
 
     let pressed_play = new Event<System.EventArgs>()

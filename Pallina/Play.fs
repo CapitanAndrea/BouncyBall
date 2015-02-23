@@ -40,7 +40,7 @@ type Bouncy_Ball() as this =
         ball.Position <- new PointF(130.f, 60.f)
         ball.VY <- 0.f
         //aggiungo i mattoni
-        coins.Add(new Coin(new PointF(0.f, 80.f)))
+        coins.Add(new Coin(new PointF(5.f, 80.f)))
         coinsLeft <- 1
         win <- false
         winBounces <- 0
@@ -89,15 +89,14 @@ type Bouncy_Ball() as this =
         coins.Clear()
 
         blocks.Add(new Block(new PointF(135.f, 150.f)))
-        coins.Add(new Coin(new PointF(135.f, 120.f)))
+        coins.Add(new Coin(new PointF(137.f, 120.f)))
         blocks.Add(new Block(new PointF(120.f, 100.f), 15.f, 50.f))
-        printfn("pallina spostata")
         ball.Position <- new PointF(20.f, 200.f)
         blocks.Add(new Block(new PointF(15.f, 210.f), 30.f, 15.f))
         blocks.Add(new Spike(new PointF(45.f, 215.f)))
         blocks.Add(new Block(new PointF(60.f, 210.f)))
         blocks.Add(new Spike(new PointF(75.f, 215.f)))
-        coins.Add(new Coin(new PointF(73.f, 180.f)))
+        coins.Add(new Coin(new PointF(75.f, 180.f)))
         blocks.Add(new Block(new PointF(90.f, 210.f)))
         blocks.Add(new Spike(new PointF(105.f, 215.f)))
         blocks.Add(new Block(new PointF(120.f, 210.f), 30.f, 15.f))
@@ -136,7 +135,6 @@ type Bouncy_Ball() as this =
                 win <- false
                 winBounces <- 0
                 level <- level + 1
-                printfn "going to level %d" level
                 match level with
                 | 1 -> firstLevel()
                 | 2 -> secondLevel()
@@ -149,60 +147,56 @@ type Bouncy_Ball() as this =
             let mutable ballPosition = [|ball.Position|]
             
             //-------------------
-            let nextPositionY = new PointF(ballPosition.[0].X, ballPosition.[0].Y+ball.VY+gravity/2.f)
+            let nextPositionY = new PointF(ball.Position.X, ball.Position.Y+ball.VY+gravity/2.f)
             let mutable newYPos = 0.f
             let nextBall = new Ball()
             nextBall.Position <- nextPositionY
             //cerco tutti i blocchi colpiti dalla palla nella prossima posizione
             blocks |> Seq.iter(fun block -> if nextBall.HitTest(block) then hitBlocks.Add(block))
-
             if(hitBlocks.Count > 0) then
+                if win then winBounces <- winBounces + 1
                 hitBlock := hitBlocks.[0]
-                //assegno ad hitblock quello più alto nel caso la velocità sia > 0
-                if ball.VY > 0.f then
-                    hitBlocks |> Seq.iter(fun block ->
-                        if block.Position.Y < (!hitBlock).Position.Y then hitBlock := block
-                        )
-                else
+                match ball.VY >= 0.f with
+                |true -> //pallina discendente
                     hitBlocks |> Seq.iter(fun block ->
                         if block.Position.Y > (!hitBlock).Position.Y then hitBlock := block
                         )
-                hitBlocks.Clear()
-                let distance = (!hitBlock).Distance(ballPosition.[0].Y+ball.Diameter)
-                //tempo che impiega la palla a colpire il mattone
-                let fallingTime = -ball.VY + sqrt((pown (ball.VY) 2) + 2.f*distance)
-                let remainingTime = 20.f-fallingTime
-                let remainingTick = remainingTime/20.f
-                //inverto la velocità lungo l'asse y
-                if ball.VY>0.f then
-                 if win then
-                    winBounces <- winBounces + 1
-                    ball.VY <- -ball.MaxVerticalSpeed
-                    let newPosition = (!hitBlock).Position.Y - 10.f + ball.VY*remainingTick + (0.5f* pown remainingTick 2)
-                    newYPos <- newPosition
-                 else
-                //printfn "hitblock is %f - %f because y will be %f" (!hitBlock).Position.X (!hitBlock).Position.Y nextPositionY.Y
-                //scendendo la pallina colpisce...
+
+                    hitBlocks.Clear()
+                    let distance = (!hitBlock).DistanceFromTop(ballPosition.[0].Y+ball.Diameter)
+                    //tempo che impiega la palla a colpire il mattone
+                    let fallingTime = -ball.VY + sqrt((pown (ball.VY) 2) + 2.f*distance)
+                    let remainingTime = 20.f-fallingTime
+                    let remainingTick = remainingTime/20.f
                     match ((!hitBlock):Block) with
                     | :? Spike -> //spine
-                        printfn "die at level %d" level
-                        ko level
+                        if not win then
+                            ko level
                         newYPos <- ball.Position.Y
                         //newYPos <- ball.Position.Y
                     | :? JumpBlock -> //blocco salto
                         let jump = (!hitBlock) :?> JumpBlock
+                        let newPosition = (!hitBlock).Position.Y - ball.Diameter - jump.JumpSpeed*remainingTick + (gravity/2.f* pown remainingTick 2)
+                        newYPos <- newPosition
                         ball.VY <- -jump.JumpSpeed + gravity*remainingTick
-                        let newPosition = (!hitBlock).Position.Y - 10.f + ball.VY*remainingTick + (gravity/2.f* pown remainingTick 2)
-                        newYPos <- newPosition
-                        //printfn "on a jump block"
                     | _ -> //blocco normale
-                        ball.VY <- -ball.MaxVerticalSpeed + gravity*remainingTick
-                        let newPosition = (!hitBlock).Position.Y - 10.f + ball.VY*remainingTick + (gravity/2.f* pown remainingTick 2)
+                        let newPosition = (!hitBlock).Position.Y - ball.Diameter - ball.MaxVerticalSpeed*remainingTick + (gravity/2.f* pown remainingTick 2)
                         newYPos <- newPosition
-
-                else 
-                    ball.VY <- 0.f
-                    newYPos <- (!hitBlock).Position.Y + (!hitBlock).Height + 1.f
+                        ball.VY <- -ball.MaxVerticalSpeed + gravity*remainingTick
+                        //printfn "ball at %f %f" ball.Position.X ball.Position.Y
+                        //printfn "block at %f %f" (!hitBlock).Position.X (!hitBlock).Position.Y
+                |false -> //pallina ascendente
+                    hitBlocks |> Seq.iter(fun block ->
+                        if block.Position.Y < (!hitBlock).Position.Y then hitBlock := block
+                        )
+                    hitBlocks.Clear()
+                    let distance = (!hitBlock).DistanceFromBot(ball.Position.Y)
+                    //tempo che impiega la palla a colpire il mattone
+                    let fallingTime = -ball.VY + sqrt((pown (ball.VY) 2) + 2.f*distance)
+                    let remainingTime = 20.f-fallingTime
+                    let remainingTick = remainingTime/20.f
+                    newYPos <- (!hitBlock).Position.Y+(!hitBlock).Height + (gravity/2.f* pown remainingTick 2)
+                    ball.VY <- gravity*remainingTick
 
             else //update ball speed
                 newYPos <- nextPositionY.Y
@@ -248,15 +242,23 @@ type Bouncy_Ball() as this =
             if ballPosition.[0].Y>500.f && not win then
                 //pallina uscita, dallo schermo: hai perso.
                 ko level
+            if ballPosition.[0].Y>500.f && win then
+                win <- false
+                winBounces <- 0
+                level <- level + 1
+                match level with
+                | 1 -> firstLevel()
+                | 2 -> secondLevel()
+                | 3 -> thirdLevel()
+                | _ -> ()
+
             //disegno
             coins |> Seq.iter(fun coin ->
-                let ballRect = new RectangleF(ball.Position, new SizeF(ball.Diameter, ball.Diameter))
-                let coinRect = new RectangleF(coin.Position, new SizeF(coin.Diameter, coin.Diameter))
-                if(ballRect.IntersectsWith(coinRect) && coin.IsCollected = false) then
+                if(coin.collectTest(ball) && coin.IsCollected = false) then
                     coin.IsCollected <- true
                     coinsLeft <- coinsLeft - 1
                     win <- coinsLeft = 0
-                    //printfn "coins left %d" coinsLeft
+                    printfn "coins left %d" coinsLeft
             )
             this.Invalidate()
             //ballTimer.Stop()

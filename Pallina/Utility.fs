@@ -77,8 +77,11 @@ type Block(pos:PointF, wid:float32, hei:float32) =
     member this.Mass
         with get() = mass
 
-    member this.Distance
-        with get(y) = pos.Y-y
+    member this.DistanceFromTop
+        with get(y) = position.Y-y
+
+    member this.DistanceFromBot
+        with get(y) = y - (position.Y + height)
 
     member this.Height
         with get() = height
